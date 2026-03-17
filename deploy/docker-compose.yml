@@ -1,0 +1,63 @@
+services:
+  traefik:
+    image: traefik:v3.3
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.web.http.redirections.entryPoint.to=websecure
+      - --entrypoints.web.http.redirections.entryPoint.scheme=https
+      - --certificatesresolvers.le.acme.tlschallenge=true
+      - --certificatesresolvers.le.acme.email=${TRAEFIK_ACME_EMAIL}
+      - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - letsencrypt:/letsencrypt
+    restart: unless-stopped
+
+  time-app:
+    build:
+      context: ../
+      args:
+        VITE_API_URL: https://${TIME_API_HOST}
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.time-app.rule=Host(`${TIME_APP_HOST}`)
+      - traefik.http.routers.time-app.entrypoints=websecure
+      - traefik.http.routers.time-app.tls.certresolver=le
+      - traefik.http.services.time-app.loadbalancer.server.port=80
+    restart: unless-stopped
+
+  time-api:
+    build:
+      context: ./api
+    environment:
+      - NODE_ENV=production
+      - PORT=3400
+      - TIME_DB=/data/time.db
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - TIME_MAILER_FROM=${TIME_MAILER_FROM}
+      - APP_NAME=${APP_NAME:-Time}
+      - TIME_APP_URL=https://${TIME_APP_HOST}
+      - COOKIE_DOMAIN=${COOKIE_DOMAIN}
+      - CORS_ORIGINS=https://${TIME_APP_HOST}
+      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID}
+      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN}
+      - TWILIO_PHONE_NUMBER=${TWILIO_PHONE_NUMBER}
+    volumes:
+      - time-data:/data
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.time-api.rule=Host(`${TIME_API_HOST}`)
+      - traefik.http.routers.time-api.entrypoints=websecure
+      - traefik.http.routers.time-api.tls.certresolver=le
+      - traefik.http.services.time-api.loadbalancer.server.port=3400
+    restart: unless-stopped
+
+volumes:
+  letsencrypt:
+  time-data:
