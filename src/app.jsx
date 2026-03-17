@@ -9,6 +9,7 @@ import { ApprovalScreen } from './screens/ApprovalScreen';
 import { processQueue, getPendingCount } from './lib/sync';
 import { getMe, logout } from './lib/auth';
 import { fetchTimeStatus } from './lib/api';
+import { isNative } from './lib/platform';
 import db from './lib/db';
 
 // Global app state
@@ -50,24 +51,44 @@ export function App() {
       loadActiveShift().catch(err => console.error('Failed to load active shift:', err));
     })();
 
-    // Online/offline event listeners
-    const handleOnline = () => {
-      isOnline.value = true;
-      processQueue()
-        .then(() => { updatePendingCount(); })
-        .catch(err => console.error('Online sync failed:', err));
-    };
+    // Online/offline listeners — native uses @capacitor/network, web uses window events
+    let cleanupNetwork = () => {};
 
-    const handleOffline = () => {
-      isOnline.value = false;
-    };
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
+    if (isNative) {
+      let networkListener = null;
+      import('@capacitor/network').then(({ Network }) => {
+        Network.getStatus().then(status => {
+          isOnline.value = status.connected;
+        });
+        Network.addListener('networkStatusChange', (status) => {
+          isOnline.value = status.connected;
+          if (status.connected) {
+            processQueue()
+              .then(() => { updatePendingCount(); })
+              .catch(err => console.error('Online sync failed:', err));
+          }
+        }).then(handle => { networkListener = handle; });
+      });
+      cleanupNetwork = () => { if (networkListener) networkListener.remove(); };
+    } else {
+      const handleOnline = () => {
+        isOnline.value = true;
+        processQueue()
+          .then(() => { updatePendingCount(); })
+          .catch(err => console.error('Online sync failed:', err));
+      };
+      const handleOffline = () => { isOnline.value = false; };
+      window.addEventListener('online', handleOnline);
+      window.addEventListener('offline', handleOffline);
+      cleanupNetwork = () => {
+        window.removeEventListener('online', handleOnline);
+        window.removeEventListener('offline', handleOffline);
+      };
+    }
 
     // Periodic sync check (every 30 seconds)
     const syncInterval = setInterval(() => {
-      if (navigator.onLine) {
+      if (isOnline.value) {
         processQueue()
           .then(() => { updatePendingCount(); })
           .catch(err => console.error('Periodic sync failed:', err));
@@ -75,8 +96,7 @@ export function App() {
     }, 30000);
 
     return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
+      cleanupNetwork();
       clearInterval(syncInterval);
     };
   }, []);

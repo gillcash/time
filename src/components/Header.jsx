@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'preact/hooks';
 import { isOnline, pendingCount, currentUser, handleLogout, navigateHome } from '../app';
 
-const APP_VERSION = '0.3.0';
+const APP_VERSION = '0.4.0';
 
 const LogoutIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

@@ -4,7 +4,18 @@
  *
  * Captures 5 readings at 1s intervals, filters out readings with
  * accuracy > 65m, then takes the median lat/lng/accuracy.
+ *
+ * On native (Capacitor), uses @capacitor/geolocation instead of
+ * navigator.geolocation for proper native GPS access.
  */
+
+import { isNative } from './platform';
+
+let CapGeo = null;
+async function getCapGeo() {
+  if (!CapGeo) { CapGeo = (await import('@capacitor/geolocation')).Geolocation; }
+  return CapGeo;
+}
 
 const SAMPLE_COUNT = 5;
 const SAMPLE_INTERVAL_MS = 1000;
@@ -14,7 +25,26 @@ const MAX_SPEED_MS = 2.5; // 9 km/h — drive-by detection
 /**
  * Capture a single GPS reading. Never rejects.
  */
-function singleReading(timeoutMs = 10000) {
+async function singleReading(timeoutMs = 10000) {
+  if (isNative) {
+    try {
+      const Geo = await getCapGeo();
+      const pos = await Geo.getCurrentPosition({
+        enableHighAccuracy: true,
+        timeout: timeoutMs,
+      });
+      return {
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude,
+        accuracy: pos.coords.accuracy,
+        speed: pos.coords.speed,
+        timestamp: pos.timestamp,
+      };
+    } catch {
+      return null;
+    }
+  }
+
   return new Promise((resolve) => {
     if (!navigator.geolocation) {
       resolve(null);
@@ -76,7 +106,24 @@ function detectMock(pos) {
  * Never rejects.
  */
 export async function captureLocation() {
-  if (!navigator.geolocation) {
+  // On native, request permissions first
+  if (isNative) {
+    try {
+      const Geo = await getCapGeo();
+      const perms = await Geo.requestPermissions();
+      if (perms.location === 'denied') {
+        return {
+          lat: null, lng: null, accuracy: null,
+          speed: null, samples: 0, mock_detected: false,
+          flag_reasons: ['permission_denied'], error: 'Location permission denied'
+        };
+      }
+    } catch {
+      // Permission request failed — continue and let singleReading handle errors
+    }
+  }
+
+  if (!isNative && !navigator.geolocation) {
     return {
       lat: null, lng: null, accuracy: null,
       speed: null, samples: 0, mock_detected: false,

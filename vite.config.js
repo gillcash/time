@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [
     preact(),
     VitePWA({
-      registerType: 'autoUpdate',
+      injectRegister: false,
       includeAssets: ['icons/*.png', 'favicon.ico', 'favicon-*.png', 'apple-touch-icon*.png'],
       manifest: {
         name: 'Time',

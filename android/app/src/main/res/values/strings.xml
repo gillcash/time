@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Time</string>
+    <string name="title_activity_main">Time</string>
+    <string name="package_name">com.gillcash.time</string>
+    <string name="custom_url_scheme">com.gillcash.time</string>
+</resources>

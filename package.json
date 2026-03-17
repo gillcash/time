@@ -1,21 +1,29 @@
 {
   "name": "time-app",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "GPS-verified clock-in/clock-out PWA",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "eslint src --ext .js,.jsx"
+    "lint": "eslint src --ext .js,.jsx",
+    "cap:sync": "npx cap sync",
+    "cap:run": "npx cap run android",
+    "build:native": "vite build && npx cap sync"
   },
   "dependencies": {
+    "@capacitor/android": "^8.2.0",
+    "@capacitor/core": "^8.2.0",
+    "@capacitor/geolocation": "^8.1.0",
+    "@capacitor/network": "^8.0.1",
     "@preact/signals": "^1.2.2",
     "dexie": "^3.2.4",
     "luxon": "^3.5.0",
     "preact": "^10.19.3"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.2.0",
     "@preact/preset-vite": "^2.8.1",
     "eslint": "^8.56.0",
     "eslint-plugin-react": "^7.33.2",

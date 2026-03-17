@@ -24,5 +24,10 @@ npm-debug.log*
 # Cache
 .cache/
 
+# Capacitor native build artifacts
+android/app/build/
+android/.gradle/
+ios/App/Pods/
+
 # Keystore files (Capacitor / Android builds)
 *.jks
