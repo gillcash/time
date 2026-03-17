@@ -10,12 +10,14 @@
     "lint": "eslint src --ext .js,.jsx",
     "cap:sync": "npx cap sync",
     "cap:run": "npx cap run android",
-    "build:native": "vite build && npx cap sync"
+    "build:native": "vite build && npx cap sync",
+    "cap:run:ios": "npx cap run ios"
   },
   "dependencies": {
     "@capacitor/android": "^8.2.0",
     "@capacitor/core": "^8.2.0",
     "@capacitor/geolocation": "^8.1.0",
+    "@capacitor/ios": "^8.2.0",
     "@capacitor/network": "^8.0.1",
     "@preact/signals": "^1.2.2",
     "dexie": "^3.2.4",
