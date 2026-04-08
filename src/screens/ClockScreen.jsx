@@ -7,6 +7,7 @@ import { addToQueue } from '../lib/sync';
 import { showToast } from '../components/Toast';
 import db from '../lib/db';
 import { getDeviceId } from '../lib/device';
+import { uuid } from '../lib/uuid';
 
 export function ClockScreen() {
   const [currentTime, setCurrentTime] = useState(nowLocal());
@@ -50,7 +51,7 @@ export function ClockScreen() {
       } catch (err) {
         if (err.name === 'TypeError' || !navigator.onLine) {
           await addToQueue(payload, 'clock_in');
-          entry = { id: crypto.randomUUID(), clock_in_at: new Date().toISOString(), ...payload };
+          entry = { id: uuid(), clock_in_at: new Date().toISOString(), ...payload };
           showToast('Clocked in (queued for sync)', 'success');
         } else {
           throw err;

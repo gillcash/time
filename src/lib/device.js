@@ -1,4 +1,5 @@
 import { platformPrefix } from './platform';
+import { uuid } from './uuid';
 
 /**
  * Get or create a device ID for tracking submissions.
@@ -15,7 +16,7 @@ export function getDeviceId() {
       localStorage.setItem('time_device_id', id);
       localStorage.removeItem('pwa_device_id');
     } else {
-      id = platformPrefix + '-' + crypto.randomUUID().substring(0, 8).toUpperCase();
+      id = platformPrefix + '-' + uuid().substring(0, 8).toUpperCase();
       localStorage.setItem('time_device_id', id);
     }
   }

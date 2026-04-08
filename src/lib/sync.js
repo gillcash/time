@@ -6,6 +6,7 @@
 import db, { SYNC_STATUS } from './db';
 import { submitTimeEvent } from './api';
 import { getDeviceId } from './device';
+import { uuid } from './uuid';
 
 const MAX_RETRIES = 5;
 const RETRY_DELAYS = [1000, 5000, 15000, 60000, 300000]; // Exponential backoff
@@ -18,7 +19,7 @@ let _syncing = false;
  */
 export async function addToQueue(eventData, eventType = 'clock_in') {
   const submission = {
-    submission_uuid: crypto.randomUUID(),
+    submission_uuid: uuid(),
     event_type: eventType,
     status: SYNC_STATUS.PENDING,
     created_at: new Date().toISOString(),

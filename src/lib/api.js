@@ -179,3 +179,31 @@ export async function syncTimeEvents(events) {
 
   return r.json();
 }
+
+/**
+ * Fetch current user's notification settings
+ */
+export async function fetchSettings() {
+  const r = await fetch(`${API_URL}/api/time/settings`, {
+    credentials: 'include'
+  });
+  if (!r.ok) throw new Error(`Failed to fetch settings: ${r.status}`);
+  return r.json();
+}
+
+/**
+ * Update current user's notification settings
+ */
+export async function updateSettings(body) {
+  const r = await fetch(`${API_URL}/api/time/settings`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify(body)
+  });
+  if (!r.ok) {
+    const error = await r.json().catch(() => ({}));
+    throw new Error(error.error || `Failed to update settings: ${r.status}`);
+  }
+  return r.json();
+}

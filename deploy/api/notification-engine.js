@@ -231,6 +231,50 @@ async function checkMissedClockOuts(getTimeDb) {
   }
 }
 
+// ── Check: Clock-out reminders (per-employee configured time) ──
+// Fires SMS if the employee is clocked in and current local time >= their
+// configured reminder time. Deduped per day via local_date reference key.
+
+async function checkClockoutReminders(getTimeDb) {
+  let db;
+  try {
+    db = getTimeDb();
+    const now = DateTime.now().setZone(TZ);
+    const currentTime = now.toFormat('HH:mm'); // e.g. '17:00'
+    const dateEpoch = Math.floor(now.startOf('day').toMillis() / 1000);
+
+    // No date filter — the dateEpoch dedup key already prevents duplicate SMS per day,
+    // and removing this filter catches overnight forgotten clock-ins from prior days.
+    const rows = db.prepare(`
+      SELECT DISTINCT te.employee_id, e.phone, e.clockout_reminder_time
+      FROM time_entries te
+      JOIN employees e ON e.id = te.employee_id
+      WHERE te.status = 'open'
+        AND e.active = 1
+        AND e.clockout_reminder_time IS NOT NULL
+    `).all();
+
+    for (const row of rows) {
+      // Only send if current local time >= employee's configured reminder time
+      if (currentTime < row.clockout_reminder_time) continue;
+      try {
+        await sendAndRecord(db, {
+          employeeId: row.employee_id,
+          phone: row.phone,
+          type: 'clockout_reminder',
+          body: `${process.env.APP_NAME || 'Time'}: Reminder — you're still clocked in. Don't forget to clock out!`,
+          referenceType: 'local_date',
+          referenceId: dateEpoch
+        });
+      } catch (err) {
+        console.error(`[notifications] clockout_reminder failed for employee ${row.employee_id}:`, err.message);
+      }
+    }
+  } finally {
+    db?.close();
+  }
+}
+
 // ── Check: Approaching overtime ───────────────────────────────
 
 async function checkApproachingOvertime(getTimeDb) {
@@ -477,6 +521,7 @@ export async function runNotificationCycle(getTimeDb) {
   console.log(`[notifications] cycle starting at ${new Date().toISOString()}`);
   const checks = [
     ['missed_clock_out', checkMissedClockOuts],
+    ['clockout_reminder', checkClockoutReminders],
     ['approaching_overtime', checkApproachingOvertime],
     ['timesheet_reminder', checkTimesheetReminder],
     ['timesheet_escalation', checkTimesheetEscalation]
