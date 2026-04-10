@@ -20,6 +20,8 @@ import {
 const TZ = 'America/Moncton';
 const TIME_APP_URL = process.env.TIME_APP_URL || 'http://localhost:3000';
 const MAX_SYNC_BATCH = 100;
+const IS_DEV = process.env.NODE_ENV === 'development';
+const DEV_BYPASS_CODE = 'DEV999';
 
 // ════════════════════════════════════════════════════════════════
 // Pure business logic (ported from frontend lib/)
@@ -277,8 +279,40 @@ export function createTimeRouter(getTimeDb) {
       const normalizedEmail = email.trim().toLowerCase();
       const normalizedCode = code.trim().toUpperCase();
 
-      if (!/^[ABCDEFGHJKMNPQRSTUVWXYZ2-9]{6}$/.test(normalizedCode)) {
+      if (!/^[ABCDEFGHJKMNPQRSTUVWXYZ2-9]{6}$/.test(normalizedCode) && normalizedCode !== DEV_BYPASS_CODE) {
         return res.status(400).json({ error: 'A 6-character code is required' });
+      }
+
+      // ── Dev bypass: DEV999 skips magic link lookup ──────────────
+      if (IS_DEV && normalizedCode === DEV_BYPASS_CODE) {
+        db = getTimeDb();
+        const employee = db.prepare(
+          'SELECT id, active FROM employees WHERE email = ? AND active = 1'
+        ).get(normalizedEmail);
+        if (!employee) {
+          return res.status(400).json({ error: 'No active employee with that email' });
+        }
+        const sessionToken = generateToken();
+        const sessionHash = hashToken(sessionToken);
+        const sessionExpiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+        db.prepare(`
+          INSERT INTO sessions (employee_id, token_hash, ip_address, user_agent, expires_at)
+          VALUES (?, ?, ?, ?, ?)
+        `).run(employee.id, sessionHash, req.ip, req.get('user-agent') || null, sessionExpiry);
+        auditLog(db, {
+          actorId: employee.id, action: 'login_dev_bypass',
+          targetType: 'employee', targetId: employee.id, ipAddress: req.ip
+        });
+        const user = db.prepare(`
+          SELECT id, employee_id AS employeeCode, email, role,
+                 legal_given_name AS legalGivenName, legal_surname AS legalSurname,
+                 display_name AS displayName, supervisor_id AS supervisorId,
+                 department, job_title AS jobTitle
+          FROM employees WHERE id = ?
+        `).get(employee.id);
+        setTimeSessionCookie(res, sessionToken, 30);
+        console.log(`[DEV] Bypass login for ${normalizedEmail} (employee #${employee.id})`);
+        return res.json({ ok: true, user });
       }
 
       // Rate limit per email — check only (increment after outcome is known)
@@ -1314,11 +1348,82 @@ export function createTimeRouter(getTimeDb) {
   );
 
   // ════════════════════════════════════════════════════════════════
+  // USER SETTINGS
+  // ════════════════════════════════════════════════════════════════
+
+  const CLOCKOUT_REMINDER_RE = /^(1[6-9]:(00|15|30|45)|20:00)$/;
+
+  // GET /api/time/settings — current user's notification settings
+  router.get('/api/time/settings', requireTimeAuth, (req, res) => {
+    let db;
+    try {
+      db = getTimeDb();
+      const row = db.prepare(
+        'SELECT clockout_reminder_time, phone FROM employees WHERE id = ?'
+      ).get(req.timeUser.id);
+
+      res.json({
+        clockout_reminder_time: row?.clockout_reminder_time ?? null,
+        has_phone: !!row?.phone
+      });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    } finally {
+      db?.close();
+    }
+  });
+
+  // PUT /api/time/settings — update user's notification settings
+  router.put('/api/time/settings', requireTimeAuth, (req, res) => {
+    let db;
+    try {
+      const { clockout_reminder_time } = req.body;
+
+      // Validate: must be null or a valid HH:MM in the 16:00–20:00 range
+      if (clockout_reminder_time === undefined) {
+        return res.status(400).json({
+          error: 'clockout_reminder_time is required (use null to disable)'
+        });
+      }
+      if (clockout_reminder_time !== null) {
+        if (typeof clockout_reminder_time !== 'string' || !CLOCKOUT_REMINDER_RE.test(clockout_reminder_time)) {
+          return res.status(400).json({
+            error: 'clockout_reminder_time must be null or HH:MM between 16:00 and 20:00 in 15-minute increments'
+          });
+        }
+      }
+
+      db = getTimeDb();
+      db.transaction(() => {
+        db.prepare(
+          'UPDATE employees SET clockout_reminder_time = ? WHERE id = ?'
+        ).run(clockout_reminder_time ?? null, req.timeUser.id);
+
+        auditLog(db, {
+          actorId: req.timeUser.id,
+          action: 'update_settings',
+          targetType: 'employee',
+          targetId: req.timeUser.id,
+          details: { clockout_reminder_time: clockout_reminder_time ?? null },
+          ipAddress: req.ip
+        });
+      })();
+
+      res.json({ ok: true, clockout_reminder_time: clockout_reminder_time ?? null });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    } finally {
+      db?.close();
+    }
+  });
+
+  // ════════════════════════════════════════════════════════════════
   // NOTIFICATIONS — history for debugging
   // ════════════════════════════════════════════════════════════════
 
   const NOTIFICATION_TYPES = new Set([
     'missed_clock_out',
+    'clockout_reminder',
     'approaching_overtime',
     'approaching_overtime_sup',
     'timesheet_reminder',

@@ -3874,3 +3874,202 @@ body {
   cursor: not-allowed;
   box-shadow: none;
 }
+
+/* ═══════════════════════════════════════════════
+   SETTINGS SCREEN
+   ═══════════════════════════════════════════════ */
+
+.settings-screen {
+  padding: var(--space-4);
+}
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-family: var(--font-industrial);
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-4);
+  padding: 0 var(--space-1);
+}
+
+.settings-header svg {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.settings-card {
+  background: var(--bg-secondary);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.settings-item {
+  display: flex;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-item-icon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--slate-100);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-secondary);
+}
+
+.settings-item-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-item-label {
+  display: block;
+  font-family: var(--font-industrial);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 0.3px;
+  margin-bottom: var(--space-1);
+}
+
+.settings-item-desc {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.settings-select-wrap {
+  position: relative;
+  padding: var(--space-4) var(--space-5);
+}
+
+.settings-select {
+  font-size: 17px;
+}
+
+.settings-select-wrap.saving .settings-select {
+  opacity: 0.5;
+}
+
+.settings-saving-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--accent);
+  animation: settings-saving-slide 0.8s ease-in-out infinite;
+}
+
+@keyframes settings-saving-slide {
+  0% { transform: scaleX(0); transform-origin: left; }
+  50% { transform: scaleX(1); transform-origin: left; }
+  50.01% { transform-origin: right; }
+  100% { transform: scaleX(0); transform-origin: right; }
+}
+
+.settings-loading {
+  min-height: var(--touch-preferred);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-industrial);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.settings-current-value {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-5);
+  background: var(--slate-50);
+  border-top: 1px solid var(--border);
+}
+
+.settings-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--slate-300);
+  flex-shrink: 0;
+}
+
+.settings-status-dot.active {
+  background: var(--safety-green);
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.4);
+}
+
+.settings-status-dot.error {
+  background: var(--safety-red);
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.4);
+}
+
+.settings-status-text {
+  font-family: var(--font-industrial);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.3px;
+}
+
+.settings-phone-warning {
+  margin-top: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  font-family: var(--font-industrial);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--safety-amber-dim);
+  background: rgba(245, 158, 11, 0.1);
+  border-left: 3px solid var(--safety-amber);
+  border-radius: 4px;
+  letter-spacing: 0.2px;
+}
+
+/* Offline state */
+.settings-offline {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-8);
+  margin-top: var(--space-8);
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.settings-offline svg {
+  opacity: 0.4;
+}
+
+.settings-offline-title {
+  font-family: var(--font-industrial);
+  font-size: 18px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-secondary);
+}
+
+.settings-offline-text {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  color: var(--text-muted);
+}

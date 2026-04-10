@@ -13,7 +13,7 @@ const TIME_DB = process.env.TIME_DB || '/data/time.db';
 
 const CORS_ORIGINS = process.env.CORS_ORIGINS
   ? process.env.CORS_ORIGINS.split(',').map(s => s.trim())
-  : ['http://localhost:3000', 'http://localhost:4173'];
+  : ['http://localhost:3000', 'http://localhost:4173', 'http://100.104.242.54:3000'];
 
 app.use(cors({ origin: CORS_ORIGINS, credentials: true }));
 app.use(express.json());

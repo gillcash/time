@@ -290,8 +290,8 @@ CREATE TABLE app_config (
 );
 
 INSERT INTO app_config (key, value, description) VALUES
-('geofence_shop_lat',           '0.0',              'Shop geofence center latitude (UPDATE WITH REAL COORDS)'),
-('geofence_shop_lng',           '0.0',              'Shop geofence center longitude (UPDATE WITH REAL COORDS)'),
+('geofence_shop_lat',           '45.763042153388085', 'Shop geofence center latitude'),
+('geofence_shop_lng',           '-64.74843858746247', 'Shop geofence center longitude'),
 ('geofence_shop_radius_m',      '150',              'Shop geofence radius in meters'),
 ('gps_sample_count',            '5',                'Number of GPS readings to capture per event'),
 ('gps_sample_interval_ms',      '1000',             'Milliseconds between GPS readings'),
@@ -383,6 +383,18 @@ export function ensureTimeSchema(getTimeDb) {
       console.log('ensureTimeSchema: time.db schema created (v1.1.0)');
     } else {
       console.log('ensureTimeSchema: time.db schema already exists');
+    }
+
+    // Seed dev admin if NODE_ENV=development and no employees exist yet
+    if (process.env.NODE_ENV === 'development') {
+      const count = db.prepare('SELECT COUNT(*) AS c FROM employees').get();
+      if (count.c === 0) {
+        db.prepare(`
+          INSERT INTO employees (employee_id, email, legal_given_name, legal_surname, display_name, role, department, job_title, hourly_rate)
+          VALUES ('DEV-001', 'admin@dev.local', 'Dev', 'Admin', 'Dev Admin', 'admin', 'Development', 'Administrator', 25.00)
+        `).run();
+        console.log('ensureTimeSchema: seeded dev admin (admin@dev.local)');
+      }
     }
 
     // Idempotent migration: ensure notifications_sent exists even on DBs
@@ -517,6 +529,15 @@ export function ensureTimeSchema(getTimeDb) {
         `);
       })();
       console.log('ensureTimeSchema: rebuilt magic_links to drop UNIQUE on token_hash');
+    }
+
+    // Idempotent migration: add clockout_reminder_time column to employees
+    // Stores HH:MM (24h) for per-employee daily clock-out reminder, NULL = disabled
+    try {
+      db.exec('ALTER TABLE employees ADD COLUMN clockout_reminder_time TEXT');
+      console.log('ensureTimeSchema: added clockout_reminder_time column to employees');
+    } catch (e) {
+      if (!e.message.includes('duplicate column')) throw e;
     }
 
     ensureViewCurrent(db, 'v_active_clocks', V_ACTIVE_CLOCKS_SQL,
