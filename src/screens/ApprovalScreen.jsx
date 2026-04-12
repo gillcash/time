@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'preact/hooks';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'preact/hooks';
 import { DateTime } from 'luxon';
 import { fetchApprovalData, approveTimesheet, reviewLunchOverride } from '../lib/api';
 import { getPayWeekStart, toLocal } from '../lib/timezone';
@@ -306,11 +306,11 @@ export function ApprovalScreen() {
   const employees = data?.employees || [];
   const approval = data?.approval;
   const isAlreadyApproved = approval?.status === 'approved';
-  const zeroHoursEmployees = employees.filter(e => e.total_net_minutes === 0);
+  const zeroHoursEmployees = useMemo(() => employees.filter(e => e.total_net_minutes === 0), [employees]);
   const allZeroHoursHaveComments = zeroHoursEmployees.every(e => (zeroComments[e.employee_id] || '').trim().length > 0);
-  const totalFlaggedEntries = employees.reduce((s, e) => s + (e.flagged_count || 0), 0);
-  const flaggedEmployeeCount = employees.filter(e => (e.flagged_count || 0) > 0).length;
-  const totalOverrides = employees.reduce((s, e) => s + (e.pending_lunch_overrides || 0), 0);
+  const totalFlaggedEntries = useMemo(() => employees.reduce((s, e) => s + (e.flagged_count || 0), 0), [employees]);
+  const flaggedEmployeeCount = useMemo(() => employees.filter(e => (e.flagged_count || 0) > 0).length, [employees]);
+  const totalOverrides = useMemo(() => employees.reduce((s, e) => s + (e.pending_lunch_overrides || 0), 0), [employees]);
   const canApprove = !approving && !isAlreadyApproved && allZeroHoursHaveComments && employees.length > 0 && totalOverrides === 0;
 
   const handleToggle = (empId) => {

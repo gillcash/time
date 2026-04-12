@@ -2,6 +2,8 @@ import Dexie from 'dexie';
 
 const db = new Dexie('TimeAppDB');
 
+// Schema v1 — future version bumps MUST include .upgrade() handlers
+// e.g. db.version(2).stores({...}).upgrade(tx => { ... })
 db.version(1).stores({
   // Pending clock-in/out events awaiting sync
   pendingSubmissions: '++id, submission_uuid, event_type, status, created_at',

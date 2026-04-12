@@ -192,12 +192,7 @@ async function loadCurrentUser() {
     try {
       const user = await getMe();
       if (user) {
-        currentUser.value = user;
-        try {
-          await db.preferences.put({ key: 'currentUser', value: user });
-        } catch (e) {
-          console.error('Failed to cache current user:', e);
-        }
+        await setAuthenticatedUser(user);
       } else {
         // Server explicitly said unauthenticated — clear stale cache
         currentUser.value = null;
@@ -227,10 +222,21 @@ export async function handleLogout() {
   currentUser.value = null;
   activeShift.value = null;
   try {
-    await db.preferences.delete('currentUser');
-    await db.activeShift.clear();
+    await db.transaction('rw', [db.preferences, db.activeShift], async () => {
+      await db.preferences.delete('currentUser');
+      await db.activeShift.clear();
+    });
   } catch (e) {
     console.error('Failed to clear logout cache:', e);
+  }
+}
+
+export async function setAuthenticatedUser(user) {
+  currentUser.value = user;
+  try {
+    await db.preferences.put({ key: 'currentUser', value: user });
+  } catch (e) {
+    console.error('Failed to cache current user:', e);
   }
 }
 
@@ -251,8 +257,10 @@ export async function loadActiveShift() {
       if (status.clockedIn && status.entry) {
         activeShift.value = status.entry;
         try {
-          await db.activeShift.clear();
-          await db.activeShift.add(status.entry);
+          await db.transaction('rw', db.activeShift, async () => {
+            await db.activeShift.clear();
+            await db.activeShift.add(status.entry);
+          });
         } catch (e) {
           console.error('Failed to cache active shift:', e);
         }

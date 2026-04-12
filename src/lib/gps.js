@@ -77,7 +77,11 @@ function wait(ms) {
 }
 
 /**
- * Get the median value from a sorted array of numbers
+ * Get the median value from a sorted array of numbers.
+ * NOTE: Averaging two middle values for even-length arrays is incorrect
+ * near the antimeridian (±180°). This app operates in Atlantic Canada
+ * so this is not a practical concern. If used in other regions, replace
+ * with circular median or pick the reading with best accuracy instead.
  */
 function median(values) {
   if (values.length === 0) return null;
@@ -119,7 +123,11 @@ export async function captureLocation() {
         };
       }
     } catch {
-      // Permission request failed — continue and let singleReading handle errors
+      return {
+        lat: null, lng: null, accuracy: null,
+        speed: null, samples: 0, mock_detected: false,
+        flag_reasons: ['permission_denied'], error: 'Location permission request failed'
+      };
     }
   }
 

@@ -7,7 +7,6 @@ import { addToQueue } from '../lib/sync';
 import { showToast } from '../components/Toast';
 import db from '../lib/db';
 import { getDeviceId } from '../lib/device';
-import { uuid } from '../lib/uuid';
 
 export function ClockScreen() {
   const [currentTime, setCurrentTime] = useState(nowLocal());
@@ -50,8 +49,8 @@ export function ClockScreen() {
         showToast('Clocked in', 'success');
       } catch (err) {
         if (err.name === 'TypeError' || !navigator.onLine) {
-          await addToQueue(payload, 'clock_in');
-          entry = { id: uuid(), clock_in_at: new Date().toISOString(), ...payload };
+          const submissionUuid = await addToQueue(payload, 'clock_in');
+          entry = { id: submissionUuid, clock_in_at: new Date().toISOString(), ...payload };
           showToast('Clocked in (queued for sync)', 'success');
         } else {
           throw err;
@@ -60,8 +59,10 @@ export function ClockScreen() {
 
       activeShift.value = entry;
       try {
-        await db.activeShift.clear();
-        await db.activeShift.add(entry);
+        await db.transaction('rw', db.activeShift, async () => {
+          await db.activeShift.clear();
+          await db.activeShift.add(entry);
+        });
       } catch (e) {
         console.error('Failed to cache active shift locally:', e);
       }
@@ -234,6 +235,7 @@ export function ClockScreen() {
             class={`clock-button clock-out ${gpsLoading ? 'loading' : ''}`}
             onClick={handleClockOut}
             disabled={gpsLoading}
+            aria-label="Clock out"
           >
             {gpsLoading ? 'Locating...' : 'Clock Out'}
           </button>
@@ -243,6 +245,7 @@ export function ClockScreen() {
           class={`clock-button clock-in ${gpsLoading ? 'loading' : ''}`}
           onClick={handleClockIn}
           disabled={gpsLoading}
+          aria-label="Clock in"
         >
           {gpsLoading ? 'Locating...' : 'Clock In'}
         </button>

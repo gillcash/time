@@ -3,8 +3,7 @@ import { FormInput } from '../components/FormInput';
 import { SubmitButton } from '../components/SubmitButton';
 import { showToast } from '../components/Toast';
 import { requestMagicLink, verifyCode } from '../lib/auth';
-import { currentUser, loadActiveShift } from '../app.jsx';
-import db from '../lib/db';
+import { currentUser, setAuthenticatedUser, loadActiveShift } from '../app.jsx';
 
 export function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -65,12 +64,7 @@ export function LoginScreen() {
       if (!data.user) {
         throw new Error('No user profile was returned — reload and try again.');
       }
-      currentUser.value = data.user;
-      try {
-        await db.preferences.put({ key: 'currentUser', value: data.user });
-      } catch (e) {
-        console.error('Failed to cache user:', e);
-      }
+      await setAuthenticatedUser(data.user);
       try {
         await loadActiveShift();
       } catch (e) {
