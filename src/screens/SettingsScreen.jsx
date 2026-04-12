@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'preact/hooks';
+import { useState, useEffect, useRef } from 'preact/hooks';
 import { isOnline } from '../app';
 import { fetchSettings, updateSettings } from '../lib/api';
 import { showToast } from '../components/Toast';
@@ -29,6 +29,7 @@ export function SettingsScreen() {
   const [hasPhone, setHasPhone] = useState(true);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const saveSeqRef = useRef(0);
 
   const loadSettings = () => {
     setLoading(true);
@@ -54,9 +55,10 @@ export function SettingsScreen() {
   }, [isOnline.value]);
 
   const handleChange = async (e) => {
-    if (reminderTime === undefined) return; // load failed — don't allow saves
+    if (reminderTime === undefined) return;
     const newValue = e.target.value === '' ? null : e.target.value;
     const previousValue = reminderTime;
+    const seq = ++saveSeqRef.current;
     setReminderTime(newValue);
     setSaving(true);
     try {
@@ -66,10 +68,14 @@ export function SettingsScreen() {
         : 'Off';
       showToast(`Reminder ${newValue ? `set to ${label}` : 'turned off'}`, 'success');
     } catch (err) {
-      setReminderTime(previousValue);
+      if (saveSeqRef.current === seq) {
+        setReminderTime(previousValue);
+      }
       showToast(err.message || 'Failed to save', 'error');
     } finally {
-      setSaving(false);
+      if (saveSeqRef.current === seq) {
+        setSaving(false);
+      }
     }
   };
 

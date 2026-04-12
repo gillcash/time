@@ -13,6 +13,7 @@ const RETRY_DELAYS = [1000, 5000, 15000, 60000, 300000]; // Exponential backoff
 
 // Concurrency guard — prevents duplicate processQueue() runs
 let _syncing = false;
+const _inflightUuids = new Set();
 
 /**
  * Add a clock event to the sync queue
@@ -43,7 +44,10 @@ export async function addToQueue(eventData, eventType = 'clock_in') {
  * Process all pending submissions in the queue
  */
 export async function processQueue() {
-  if (!navigator.onLine || _syncing) {
+  if (_syncing) {
+    return { synced: 0, failed: 0, pending: await getPendingCount() };
+  }
+  if (!navigator.onLine) {
     return { synced: 0, failed: 0, pending: await getPendingCount() };
   }
 
@@ -72,6 +76,9 @@ export async function processQueue() {
         continue;
       }
 
+      if (_inflightUuids.has(submission.submission_uuid)) continue;
+      _inflightUuids.add(submission.submission_uuid);
+
       try {
         await db.pendingSubmissions.update(submission.id, {
           status: SYNC_STATUS.SYNCING
@@ -97,9 +104,12 @@ export async function processQueue() {
         // Remove from pending
         await db.pendingSubmissions.delete(submission.id);
 
+        _inflightUuids.delete(submission.submission_uuid);
         synced++;
       } catch (error) {
         console.error('Sync error:', error);
+
+        _inflightUuids.delete(submission.submission_uuid);
 
         const newRetryCount = submission.retry_count + 1;
 

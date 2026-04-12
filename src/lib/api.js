@@ -5,6 +5,21 @@
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
+async function parseApiError(r) {
+  try {
+    const text = await r.text();
+    if (text) {
+      try {
+        const json = JSON.parse(text);
+        return json.error || `Request failed: ${r.status}`;
+      } catch {
+        return `Request failed: ${r.status}`;
+      }
+    }
+  } catch {}
+  return `Request failed: ${r.status}`;
+}
+
 /**
  * Check API connectivity
  */
@@ -35,8 +50,7 @@ export async function submitTimeEvent(eventData) {
   });
 
   if (!r.ok) {
-    const error = await r.json().catch(() => ({}));
-    throw new Error(error.error || `Time event failed: ${r.status}`);
+    throw new Error(await parseApiError(r));
   }
 
   return r.json();
@@ -115,8 +129,7 @@ export async function fetchApprovalData(week) {
   });
 
   if (!r.ok) {
-    const error = await r.json().catch(() => ({}));
-    throw new Error(error.error || `Failed to fetch approval data: ${r.status}`);
+    throw new Error(await parseApiError(r));
   }
   return r.json();
 }
@@ -133,8 +146,7 @@ export async function approveTimesheet(week, body) {
   });
 
   if (!r.ok) {
-    const error = await r.json().catch(() => ({}));
-    const err = new Error(error.error || `Approval failed: ${r.status}`);
+    const err = new Error(await parseApiError(r));
     err.status = r.status;
     throw err;
   }
@@ -153,8 +165,7 @@ export async function reviewLunchOverride(week, entryId, approved) {
   });
 
   if (!r.ok) {
-    const error = await r.json().catch(() => ({}));
-    const err = new Error(error.error || `Lunch override failed: ${r.status}`);
+    const err = new Error(await parseApiError(r));
     err.status = r.status;
     throw err;
   }
@@ -173,8 +184,7 @@ export async function syncTimeEvents(events) {
   });
 
   if (!r.ok) {
-    const error = await r.json().catch(() => ({}));
-    throw new Error(error.error || `Sync failed: ${r.status}`);
+    throw new Error(await parseApiError(r));
   }
 
   return r.json();
@@ -202,8 +212,7 @@ export async function updateSettings(body) {
     body: JSON.stringify(body)
   });
   if (!r.ok) {
-    const error = await r.json().catch(() => ({}));
-    throw new Error(error.error || `Failed to update settings: ${r.status}`);
+    throw new Error(await parseApiError(r));
   }
   return r.json();
 }

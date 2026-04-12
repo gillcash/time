@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'preact/hooks';
 import { isOnline, pendingCount, currentUser, handleLogout, navigateHome } from '../app';
 
+// Must match package.json version — update both when bumping
 const APP_VERSION = '0.4.0';
 
 const LogoutIcon = () => (
